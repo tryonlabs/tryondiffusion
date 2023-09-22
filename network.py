@@ -22,7 +22,7 @@ class AttentionPool1D(nn.Module):
 
     def forward(self, x):
         # if x in format NP
-        # add one more dimension to x for the simplicity of calculations
+        # N - Batch Dimension, P - Pose Dimension
         x = x[None, :, :]  # NN -> 1NP
         x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # 2NP
         x = x + self.positional_embedding[:, None, :].to(x.dtype)  # 2NP
