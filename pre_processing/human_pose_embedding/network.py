@@ -4,7 +4,7 @@ import torch.nn as nn
 class AutoEncoder(nn.Module):
 
     def __init__(self, inp):
-        super(AutoEncoder, self).__init__()
+        super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(inp, 32),
             nn.ReLU(True),
