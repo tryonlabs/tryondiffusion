@@ -35,7 +35,7 @@ def train(train_dir,
     for epoch in range(num_epochs):
         train_running_loss = 0
         num_batches = 0
-        for keypoints in train_dataloader:
+        for keypoints, _ in train_dataloader:
 
             model.train()
             prediction, _ = model(keypoints)

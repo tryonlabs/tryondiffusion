@@ -50,13 +50,13 @@ class KeypointDataset(Dataset):
         with open(json_path, "r") as f:
             lst = json.load(f)
         lst = normalize_lst(lst)
-        return torch.tensor(lst)  # json_path
+        return torch.tensor(lst), json_path
 
 
 if __name__ == "__main__":
     json_di = "../data/test"
     test = KeypointDataset(json_di)
     dataloader = DataLoader(test, batch_size=4)
-    for i in dataloader:
+    for i, jsn in dataloader:
         print(i)
         break
