@@ -50,37 +50,38 @@ class AttentionPool1D(nn.Module):
 
 class FiLM(nn.Module):
 
-    def __init__(self, beta, gamma):
+    def __init__(self, inp_dim):
         super().__init__()
-        self.beta = beta
-        self.gamma = gamma
+        self.fc = nn.Linear(inp_dim, 2)
+        self.activation = nn.ReLU()
 
     def forward(self, clip_embeddings):
+        x = self.fc1(clip_embeddings)
+        x = self.activation(x)
+        return self.gamma * x + self.beta
 
-        return self.gamma * clip_embeddings + self.beta
 
+class ResBlockNoAttention(nn.Module):
 
-class ResBlock(nn.Module):
-
-    def __init__(self, inp_channel, output_channel, beta, gamma):
+    def __init__(self, inp_channel, out_channel, clip_embeddings):
         super().__init__()
-        self.gn = nn.GroupNorm(min(32, int(abs(len(inp_channel)/4))))
-        self.swish = nn.SiLU()
-        self.conv = nn.Conv2d(inp_channel, output_channel)
-        self.film = FiLM(beta, gamma)
+        self.gn1 = nn.GroupNorm(min(32, int(abs(len(inp_channel)/4))))
+        self.swish1 = nn.SiLU(True)
+        self.conv1 = nn.Conv2d(inp_channel, inp_channel)
+        self.gn2 = nn.GroupNorm(min(32, int(abs(len(inp_channel) / 4))))
+        self.swish2 = nn.SiLU(True)
+        self.conv2 = nn.Conv2d(inp_channel, out_channel)
 
     def forward(self, x):
         residual = self.conv(x)
 
-        x = self.gn(x)
-        x = self.swish(x)
-        x = self.conv(x)
-        x = self.gn(x)
-        x = self.swish(x)
-        x = self.conv(x)
-        x = self.film(x)
+        x = self.gn1(x)
+        x = self.swish1(x)
+        x = self.conv1(x)
+        x = self.gn2(x)
+        x = self.swish2(x)
+        x = self.conv2(x)
 
         x += residual
 
         return x
-
