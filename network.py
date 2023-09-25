@@ -2,6 +2,23 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+
+
+class SinusodalPosEmbed(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, t):
+        device = t.device
+        half_dim = self.dim//2
+        pos_embed = math.log(10000)/(half_dim - 1)
+        pos_embed = torch.exp(torch.arange(half_dim, device=device) * -pos_embed)
+        pos_embed = t[:, None] * pos_embed[None, :]
+        pos_embed = torch.cat((pos_embed.sin(), pos_embed.cos()), dim=-1)
+        return pos_embed
+
 
 class AttentionPool1D(nn.Module):
 
@@ -20,7 +37,9 @@ class AttentionPool1D(nn.Module):
         self.c_proj = nn.Linear(pose_embeb_dim, output_dim or pose_embeb_dim)
         self.num_heads = num_heads
 
-    def forward(self, x):
+        self.pos_embed_time = SinusodalPosEmbed(output_dim or pose_embeb_dim)
+
+    def forward(self, x, time_step):
         # if x in format NP
         # N - Batch Dimension, P - Pose Dimension
         x = x[None, :, :]  # NN -> 1NP
@@ -45,6 +64,7 @@ class AttentionPool1D(nn.Module):
             training=self.training,
             need_weights=False
         )
+        x += self.pos_embed_time(time_step)
         return x.squeeze(0)
 
 
