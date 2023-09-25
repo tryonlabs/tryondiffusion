@@ -2,10 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+
+
+class SinusodalPosEmbed(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, t):
+        device = t.device
+        half_dim = self.dim//2
+        pos_embed = math.log(10000)/(half_dim - 1)
+        pos_embed = torch.exp(torch.arange(half_dim, device=device) * -pos_embed)
+        pos_embed = t[:, None] * pos_embed[None, :]
+        pos_embed = torch.cat((pos_embed.sin(), pos_embed.cos()), dim=-1)
+        return pos_embed
+
 
 class AttentionPool1D(nn.Module):
 
-    def __init__(self, pose_embeb_dim: int, num_heads: int, output_dim: int = None):
+    def __init__(self, pose_embeb_dim, num_heads=2, output_dim=None):
         """
         Clip inspired 1D attention pooling
         :param pose_embeb_dim:
@@ -20,7 +37,9 @@ class AttentionPool1D(nn.Module):
         self.c_proj = nn.Linear(pose_embeb_dim, output_dim or pose_embeb_dim)
         self.num_heads = num_heads
 
-    def forward(self, x):
+        self.pos_embed_time = SinusodalPosEmbed(output_dim or pose_embeb_dim)
+
+    def forward(self, x, time_step):
         # if x in format NP
         # N - Batch Dimension, P - Pose Dimension
         x = x[None, :, :]  # NN -> 1NP
@@ -45,43 +64,59 @@ class AttentionPool1D(nn.Module):
             training=self.training,
             need_weights=False
         )
+        x += self.pos_embed_time(time_step)
         return x.squeeze(0)
 
 
 class FiLM(nn.Module):
 
-    def __init__(self, inp_dim):
+    def __init__(self, clip_dim, channels):
         super().__init__()
-        self.fc = nn.Linear(inp_dim, 2)
-        self.activation = nn.ReLU()
+        self.channels = channels
 
-    def forward(self, clip_embeddings):
-        x = self.fc1(clip_embeddings)
-        x = self.activation(x)
-        return self.gamma * x + self.beta
+        self.fc = nn.Linear(clip_dim, 2 * channels)
+        self.activation = nn.ReLU(True)
+
+    def forward(self, clip_pooled_embed, img_embed):
+        clip_pooled_embed = self.fc(clip_pooled_embed)
+        clip_pooled_embed = self.activation(clip_pooled_embed)
+        gamma = clip_pooled_embed[:, 0:self.channels]
+        beta = clip_pooled_embed[:, self.channels:self.channels + 1]
+        film_features = torch.add(torch.mul(img_embed, gamma[:, :, None, None]), beta[:, :, None, None])
+        return film_features
 
 
 class ResBlockNoAttention(nn.Module):
 
-    def __init__(self, inp_channel, out_channel, clip_embeddings):
+    def __init__(self, inp_channel, block_channel, clip_pooled_dim):
         super().__init__()
-        self.gn1 = nn.GroupNorm(min(32, int(abs(len(inp_channel)/4))))
+        self.conv0 = nn.Conv2d(inp_channel, block_channel, (3, 3), padding=1)
+
+        self.gn1 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish1 = nn.SiLU(True)
-        self.conv1 = nn.Conv2d(inp_channel, inp_channel)
-        self.gn2 = nn.GroupNorm(min(32, int(abs(len(inp_channel) / 4))))
+        self.conv1 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
+        self.gn2 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish2 = nn.SiLU(True)
-        self.conv2 = nn.Conv2d(inp_channel, out_channel)
+        self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
 
-    def forward(self, x):
-        residual = self.conv(x)
+        self.film_generator_person_pose = FiLM(clip_pooled_dim, block_channel)
+        self.film_generator_garment_pose = FiLM(clip_pooled_dim, block_channel)
 
-        x = self.gn1(x)
+    def forward(self, x, clip_embeddings_person, clip_embeddings_garment):
+        residual = self.conv0(x)
+
+        x = self.gn1(residual)
         x = self.swish1(x)
         x = self.conv1(x)
         x = self.gn2(x)
         x = self.swish2(x)
         x = self.conv2(x)
 
+        x = self.film_generator_person_pose(clip_embeddings_person, x)
+        x = self.film_generator_garment_pose(clip_embeddings_garment, x)
+
         x += residual
 
         return x
+
+
