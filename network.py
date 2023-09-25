@@ -1,8 +1,36 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from einops import rearrange
 
 import math
+
+
+class DownSample(nn.Module):
+
+    def __init__(self, dim, dim_out):
+        super().__init__()
+        self.conv = nn.Conv2d(dim * 4, dim_out, (1, 1))
+
+    def forward(self, x):
+        # slicing image into four pieces across h and w and appending pieces to channels
+        # new_no_channel = c * 4, conserving the features instead of pooling.
+        x = rearrange(x, "b c (h p1) (w p2) -> b (c p1 p2) h w", p1=2, p2=2)
+        x = self.conv(x)
+        return x
+
+
+class UpSample(nn.Module):
+
+    def __init__(self, dim, dim_out):
+        super().__init__()
+        self.up = nn.Upsample(scale_factor=2, mode="nearest")
+        self.conv = nn.Conv2d(dim, dim_out, (3, 3), padding=1)
+
+    def forward(self, x):
+        x = self.up(x)
+        x = self.conv(x)
+        return x
 
 
 class SinusodalPosEmbed(nn.Module):
