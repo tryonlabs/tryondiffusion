@@ -78,11 +78,11 @@ class ResBlockNoAttention(nn.Module):
         self.gn2 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish2 = nn.SiLU(True)
         self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
-        self.swish3 = nn.SiLU(True)
 
-        self.film_generator = FiLM(clip_pooled_dim, block_channel)
+        self.film_generator_person_pose = FiLM(clip_pooled_dim, block_channel)
+        self.film_generator_garment_pose = FiLM(clip_pooled_dim, block_channel)
 
-    def forward(self, x, clip_embeddings):
+    def forward(self, x, clip_embeddings_person, clip_embeddings_garment):
         residual = self.conv0(x)
 
         x = self.gn1(residual)
@@ -91,10 +91,12 @@ class ResBlockNoAttention(nn.Module):
         x = self.gn2(x)
         x = self.swish2(x)
         x = self.conv2(x)
-        x = self.swish3(x)
 
-        x = self.film_generator(clip_embeddings, x)
+        x = self.film_generator_person_pose(clip_embeddings_person, x)
+        x = self.film_generator_garment_pose(clip_embeddings_garment, x)
 
         x += residual
 
         return x
+
+
