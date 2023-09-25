@@ -4,3 +4,4 @@ opencv-python
 pillow
 matplotlib
 tqdm
+torchvision
