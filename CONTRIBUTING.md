@@ -1,6 +1,3 @@
-# Try On Diffusion: A Tale of Two UNets Implementation
-[Paper Link](https://arxiv.org/abs/2306.08276)
-
 ## How to contribute to tryondiffusion
 
 ### 1. Open an issue
