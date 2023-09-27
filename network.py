@@ -33,7 +33,7 @@ class UpSample(nn.Module):
         return x
 
 
-class SinusodalPosEmbed(nn.Module):
+class SinusoidalPosEmbed(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
@@ -48,34 +48,34 @@ class SinusodalPosEmbed(nn.Module):
         return pos_embed
 
 
-class AttentionPool1D(nn.Module):
+class AttentionPool1d(nn.Module):
 
-    def __init__(self, pose_embeb_dim, num_heads=2, output_dim=None):
+    def __init__(self, pose_embeb_dim, num_heads=1):
         """
-        Clip inspired 1D attention pooling
-        :param pose_embeb_dim:
-        :param num_heads:
-        :param output_dim:
+        Clip inspired 1D attention pooling, reduce garment and person pose along keypoints
+        :param pose_embeb_dim: pose embedding dimensions
+        :param num_heads: number of attention heads
         """
         super().__init__()
-        self.positional_embedding = nn.Parameter(torch.randn(2, pose_embeb_dim) / pose_embeb_dim ** 0.5)
+        self.positional_embedding = nn.Parameter(torch.randn(3, pose_embeb_dim) / pose_embeb_dim ** 0.5)
         self.k_proj = nn.Linear(pose_embeb_dim, pose_embeb_dim)
         self.q_proj = nn.Linear(pose_embeb_dim, pose_embeb_dim)
         self.v_proj = nn.Linear(pose_embeb_dim, pose_embeb_dim)
-        self.c_proj = nn.Linear(pose_embeb_dim, output_dim or pose_embeb_dim)
+        self.c_proj = nn.Linear(pose_embeb_dim, pose_embeb_dim)
         self.num_heads = num_heads
 
-        self.pos_embed_time = SinusodalPosEmbed(output_dim or pose_embeb_dim)
+        self.pos_embed_time = SinusoidalPosEmbed(pose_embeb_dim)
 
-    def forward(self, x, time_step):
-        # if x in format NP
-        # N - Batch Dimension, P - Pose Dimension
-        x = x[None, :, :]  # NN -> 1NP
-        x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # 2NP
-        x = x + self.positional_embedding[:, None, :].to(x.dtype)  # 2NP
+    def forward(self, x, time_step=None):
+        # if x in format NCP
+        # N - Batch Dimension, P - Pose Dimension, C - No. of pose(person and garment)
+        x = x.permute(1, 0, 2)
+        x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (C+1)NP
+        x = x + self.positional_embedding[:, None, :].to(x.dtype)  # (C+1)NP
+        batch_size = x.shape[1]
         x, _ = F.multi_head_attention_forward(
             query=x[:1], key=x, value=x,
-            embed_dim_to_check=8,
+            embed_dim_to_check=x.shape[-1],
             num_heads=self.num_heads,
             q_proj_weight=self.q_proj.weight,
             k_proj_weight=self.k_proj.weight,
@@ -92,8 +92,10 @@ class AttentionPool1D(nn.Module):
             training=self.training,
             need_weights=False
         )
-        x += self.pos_embed_time(time_step)
-        return x.squeeze(0)
+        x = x.squeeze(0)
+        # time step = torch.randint(0, 1000, (batch_size,), device=device).long()
+        x += self.pos_embed_time(time_step).squeeze(1)
+        return x
 
 
 class FiLM(nn.Module):
@@ -114,11 +116,17 @@ class FiLM(nn.Module):
         return film_features
 
 
+class SelfAttention(nn.Module):
+    pass
+
+
 class ResBlockNoAttention(nn.Module):
 
     def __init__(self, inp_channel, block_channel, clip_pooled_dim):
         super().__init__()
         self.conv0 = nn.Conv2d(inp_channel, block_channel, (3, 3), padding=1)
+
+        self.film_generator_person_pose = FiLM(clip_pooled_dim, block_channel)
 
         self.gn1 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish1 = nn.SiLU(True)
@@ -127,11 +135,10 @@ class ResBlockNoAttention(nn.Module):
         self.swish2 = nn.SiLU(True)
         self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
 
-        self.film_generator_person_pose = FiLM(clip_pooled_dim, block_channel)
-        self.film_generator_garment_pose = FiLM(clip_pooled_dim, block_channel)
-
-    def forward(self, x, clip_embeddings_person, clip_embeddings_garment):
+    def forward(self, x, clip_embeddings):
         residual = self.conv0(x)
+
+        x = self.film_generator_person_pose(clip_embeddings, x)
 
         x = self.gn1(residual)
         x = self.swish1(x)
@@ -139,9 +146,6 @@ class ResBlockNoAttention(nn.Module):
         x = self.gn2(x)
         x = self.swish2(x)
         x = self.conv2(x)
-
-        x = self.film_generator_person_pose(clip_embeddings_person, x)
-        x = self.film_generator_garment_pose(clip_embeddings_garment, x)
 
         x += residual
 
