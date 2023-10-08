@@ -122,11 +122,10 @@ class SelfAttention(nn.Module):
 
 class ResBlockNoAttention(nn.Module):
 
-    def __init__(self, inp_channel, block_channel, clip_pooled_dim):
+    def __init__(self, block_channel, clip_dim):
         super().__init__()
-        self.conv0 = nn.Conv2d(inp_channel, block_channel, (3, 3), padding=1)
 
-        self.film_generator_person_pose = FiLM(clip_pooled_dim, block_channel)
+        self.film_generator_person_pose = FiLM(clip_dim, block_channel)
 
         self.gn1 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish1 = nn.SiLU(True)
@@ -135,20 +134,30 @@ class ResBlockNoAttention(nn.Module):
         self.swish2 = nn.SiLU(True)
         self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
 
+        self.conv_residual = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
+
     def forward(self, x, clip_embeddings):
-        residual = self.conv0(x)
 
         x = self.film_generator_person_pose(clip_embeddings, x)
 
-        x = self.gn1(residual)
-        x = self.swish1(x)
-        x = self.conv1(x)
-        x = self.gn2(x)
-        x = self.swish2(x)
-        x = self.conv2(x)
+        h = self.gn1(x)
+        h = self.swish1(h)
+        h = self.conv1(h)
+        h = self.gn2(h)
+        h = self.swish2(h)
+        h = self.conv2(h)
 
-        x += residual
+        h += self.conv_residual(x)
 
-        return x
+        return h
+
+
+class UNetBlockNoAttention(nn.Module):
+
+    def __init__(self, inp_channel, block_channel, clip_pooled_dim, sub_blocks_number):
+        super().__init__()
+
+        nn.ModuleList()
+
 
 
