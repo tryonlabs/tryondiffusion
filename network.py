@@ -145,6 +145,15 @@ class SelfAttention(nn.Module):
             heads=8,
             pose_dim=None,
             scale=8):
+        """
+        Intialize: att = SelfAttention(1024, 1, pose_dim=16)
+        Execute: att(torch.randn(4, 256, 1024), pose_embed=torch.randn(4, 2, 16)).size()
+        :param dim:
+        :param dim_head:
+        :param heads:
+        :param pose_dim:
+        :param scale:
+        """
         super().__init__()
         self.scale = scale
 
