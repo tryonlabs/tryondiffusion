@@ -41,8 +41,8 @@ class SinusoidalPosEmbed(nn.Module):
 
     def forward(self, t):
         device = t.device
-        half_dim = self.dim//2
-        pos_embed = math.log(10000)/(half_dim - 1)
+        half_dim = self.dim // 2
+        pos_embed = math.log(10000) / (half_dim - 1)
         pos_embed = torch.exp(torch.arange(half_dim, device=device) * -pos_embed)
         pos_embed = t[:, None] * pos_embed[None, :]
         pos_embed = torch.cat((pos_embed.sin(), pos_embed.cos()), dim=-1)
@@ -216,28 +216,102 @@ class SelfAttention(nn.Module):
         return self.to_out(out)
 
 
-class ResBlockNoAttention(nn.Module):
+class CrossAttention(nn.Module):
+    def __init__(
+            self,
+            zt_dim,
+            ic_dim,
+            dim_head=64,
+            heads=8,
+            scale=8
+    ):
 
-    def __init__(self, block_channel, clip_dim, input_channel=None):
         super().__init__()
 
-        if input_channel is None:
-            input_channel = block_channel
+        try:
+            assert zt_dim == ic_dim
+        except AssertionError:
+            print(
+                f"Expecting same dimension for zt and ic, but received {zt_dim} and {ic_dim}, indicating mismatch in "
+                f"parallel blocks of both UNets")
 
-        self.film_generator_person_pose = FiLM(clip_dim, input_channel)
+        self.scale = scale
 
-        self.gn1 = nn.GroupNorm(min(32, int(abs(input_channel / 4))), int(input_channel))
+        self.heads = heads
+        inner_dim = dim_head * heads
+
+        self.norm_zt = LayerNorm(zt_dim)
+        self.norm_ic = LayerNorm(ic_dim)
+
+        self.null_kv = nn.Parameter(torch.randn(2, dim_head))
+        self.to_q = nn.Linear(zt_dim, inner_dim, bias=False)
+        self.to_kv = nn.Linear(ic_dim, dim_head * 2, bias=False)
+
+        self.q_scale = nn.Parameter(torch.ones(dim_head))
+        self.k_scale = nn.Parameter(torch.ones(dim_head))
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, zt_dim, bias=False),
+            LayerNorm(zt_dim)
+        )
+
+    def forward(self, zt, ic):
+        # b and n will be same for both zt and ic
+        b, n, device = *zt.shape[:2], zt.device
+
+        ic = self.norm_ic(ic)
+        zt = self.norm_zt(zt)
+
+        q, k, v = (self.to_q(zt), *self.to_kv(ic).chunk(2, dim=-1))
+
+        q = rearrange(q, 'b n (h d) -> b h n d', h=self.heads)
+
+        # add null key / value for classifier free guidance in prior net
+        nk, nv = map(lambda t: repeat(t, 'd -> b 1 d', b=b), self.null_kv.unbind(dim=-2))
+        k = torch.cat((nk, k), dim=-2)
+        v = torch.cat((nv, v), dim=-2)
+
+        # qk rmsnorm
+
+        q, k = map(l2norm, (q, k))
+        q = q * self.q_scale
+        k = k * self.k_scale
+
+        # calculate query / key similarities
+
+        sim = einsum('b h i d, b j d -> b h i j', q, k) * self.scale
+
+        # attention
+
+        attn = sim.softmax(dim=-1, dtype=torch.float32)
+        attn = attn.to(sim.dtype)
+
+        # aggregate values
+
+        out = einsum('b h i j, b j d -> b h i d', attn, v)
+
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+
+
+class ResBlockNoAttention(nn.Module):
+
+    def __init__(self, block_channel, clip_dim):
+        super().__init__()
+
+        self.film = FiLM(clip_dim, block_channel)
+
+        self.gn1 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish1 = nn.SiLU(True)
-        self.conv1 = nn.Conv2d(input_channel, block_channel, (3, 3), padding=1)
+        self.conv1 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
         self.gn2 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
         self.swish2 = nn.SiLU(True)
         self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
 
-        self.conv_residual = nn.Conv2d(input_channel, block_channel, (3, 3), padding=1)
+        self.conv_residual = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
 
     def forward(self, x, clip_embeddings):
-
-        x = self.film_generator_person_pose(clip_embeddings, x)
+        x = self.film(clip_embeddings, x)
 
         h = self.gn1(x)
         h = self.swish1(h)
@@ -251,13 +325,64 @@ class ResBlockNoAttention(nn.Module):
         return h
 
 
+class ResBlockAttention(nn.Module):
+
+    def __init__(self, block_channel, clip_dim, hw_dim):
+        super().__init__()
+
+        self.block_channel = block_channel
+        self.hw_dim = hw_dim
+
+        self.film = FiLM(clip_dim, block_channel)
+
+        self.gn1 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
+        self.swish1 = nn.SiLU(True)
+        self.conv1 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
+        self.gn2 = nn.GroupNorm(min(32, int(abs(block_channel / 4))), int(block_channel))
+        self.swish2 = nn.SiLU(True)
+        self.conv2 = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
+
+        self.conv_residual = nn.Conv2d(block_channel, block_channel, (3, 3), padding=1)
+
+        att_dim = (hw_dim // 2) ** 2
+        # pose vector length will be same as clip pooled length
+        self.self_attention = SelfAttention(dim=att_dim, pose_dim=clip_dim)
+
+        self.cross_attention = CrossAttention(zt_dim=att_dim, ic_dim=att_dim)
+
+    def forward(self, x, clip_embeddings, pose_embed, garment_embed):
+        x = self.film(clip_embeddings, x)
+
+        h = self.gn1(x)
+        h = self.swish1(h)
+        h = self.conv1(h)
+        h = self.gn2(h)
+        h = self.swish2(h)
+        h = self.conv2(h)
+
+        h += self.conv_residual(x)
+
+        # self attention with pose embed concat with key value
+        h = rearrange(h, "b c (h p1) (w p2) -> b (c p1 p2) (h w)", p1=2, p2=2)
+        h = self.self_attention(h, pose_embed)
+
+        # cross attention with query from zt and key value from ic
+        garment_embed = rearrange(garment_embed, "b c (h p1) (w p2) -> b (c p1 p2) (h w)", p1=2, p2=2)
+        h = self.cross_attention(h, garment_embed)
+
+        h = rearrange(h, "b (c p1 p2) (h w) -> b c (h p1) (w p2)",
+                      c=self.block_channel, p1=2, p2=2, h=self.hw_dim // 2, w=self.hw_dim // 2)
+
+        return h
+
+
 class UNetBlockNoAttention(nn.Module):
 
-    def __init__(self, block_channel, clip_dim, res_blocks_number, input_channel=None):
+    def __init__(self, block_channel, clip_dim, res_blocks_number):
         super().__init__()
         self.blocks = nn.ModuleList([])
         for block in range(res_blocks_number):
-            self.blocks.append(ResBlockNoAttention(block_channel, clip_dim, input_channel))
+            self.blocks.append(ResBlockNoAttention(block_channel, clip_dim))
 
     def forward(self, x, clip_embeddings):
         for idx, block in enumerate(self.blocks):
@@ -265,4 +390,128 @@ class UNetBlockNoAttention(nn.Module):
         return x
 
 
+class UNetBlockAttention(nn.Module):
 
+    def __init__(self,
+                 block_channel,
+                 clip_dim,
+                 res_blocks_number,
+                 hw_dim):
+        super().__init__()
+        self.blocks = nn.ModuleList([])
+        for block in range(res_blocks_number):
+            self.blocks.append(ResBlockAttention(block_channel,
+                                                 clip_dim,
+                                                 hw_dim))
+
+    def forward(self, x, clip_embeddings, pose_embed, garment_embed):
+        for idx, block in enumerate(self.blocks):
+            x = block(x, clip_embeddings, pose_embed, garment_embed)
+        return x
+
+
+class UNet(nn.Module):
+
+    def __init__(self, pose_embed_len_dim):
+        super().__init__()
+
+        # process clip embeddings
+        self.attn_pool_layer = AttentionPool1d(pose_embed_len_dim)
+
+        # =========================person UNet================================
+        # initial image embedding size 128x128 and 6 channels(concatenate
+        # rgb agnostic image and noise)
+
+        # 3x3 conv layer person
+        self.init_conv_person = nn.Conv2d(6, 128, (3, 3), padding=1)
+
+        # 128 unit encoder person
+        self.block1_person = UNetBlockNoAttention(block_channel=128,
+                                                  clip_dim=pose_embed_len_dim,
+                                                  res_blocks_number=3)
+        self.downsample1_person = DownSample(dim=128, dim_out=256)
+
+        # 64 unit encoder person
+        self.block2_person = UNetBlockNoAttention(block_channel=256,
+                                                  clip_dim=pose_embed_len_dim,
+                                                  res_blocks_number=4)
+        self.downsample2_person = DownSample(dim=256, dim_out=512)
+
+        # 32 unit encoder person
+        self.block3_person = UNetBlockAttention(block_channel=512,
+                                                clip_dim=pose_embed_len_dim,
+                                                res_blocks_number=6,
+                                                hw_dim=32)
+        self.downsample3_person = DownSample(dim=512, dim_out=1024)
+
+        # 16 unit encoder person
+        self.block4_person = UNetBlockAttention(block_channel=1024,
+                                                clip_dim=pose_embed_len_dim,
+                                                res_blocks_number=7,
+                                                hw_dim=16)
+
+        # 16 unit decoder person
+        self.block5_person = UNetBlockAttention(block_channel=1024,
+                                                clip_dim=pose_embed_len_dim,
+                                                res_blocks_number=7,
+                                                hw_dim=16)
+        self.upsample1_person = UpSample(dim=1024, dim_out=512)
+
+        # 32 unit decoder person
+        self.block6_person = UNetBlockAttention(block_channel=512,
+                                                clip_dim=pose_embed_len_dim,
+                                                res_blocks_number=6,
+                                                hw_dim=32)
+        self.upsample2_person = UpSample(dim=512, dim_out=256)
+
+        # 64 unit decoder person
+        self.block7_person = UNetBlockNoAttention(block_channel=256,
+                                                  clip_dim=pose_embed_len_dim,
+                                                  res_blocks_number=4)
+        self.upsample3_person = UpSample(dim=256, dim_out=128)
+
+        # 128 unit decoder person
+        self.block8_person = UNetBlockNoAttention(block_channel=128,
+                                                  clip_dim=pose_embed_len_dim,
+                                                  res_blocks_number=3)
+
+        self.final_conv_person = nn.Conv2d(128, 3, (3, 3), padding=1)
+        # ==========================person UNet ends==========================
+
+        # ==========================garment UNet==============================
+        # initial image embedding size 128x128 and 3 channels
+        self.init_conv_garment = nn.Conv2d(3, 128, (3, 3), padding=1)
+
+        # 128 unit encoder garment
+        self.block1_garment = UNetBlockNoAttention(block_channel=128,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=3)
+        self.downsample1_garment = DownSample(dim=128, dim_out=256)
+
+        # 64 unit encoder garment
+        self.block2_garment = UNetBlockNoAttention(block_channel=256,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=4)
+        self.downsample2_garment = DownSample(dim=256, dim_out=512)
+
+        # 32 unit encoder garment
+        self.block3_garment = UNetBlockNoAttention(block_channel=512,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=6)
+        self.downsample3_garment = DownSample(dim=512, dim_out=1024)
+
+        # 16 unit encoder garment
+        self.block4_garment = UNetBlockNoAttention(block_channel=1024,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=7)
+
+        # 16 unit decoder garment
+        self.block5_garment = UNetBlockNoAttention(block_channel=1024,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=7)
+        self.upsample1_garment = UpSample(dim=1024, dim_out=512)
+
+        # 32 unit decoder garment
+        self.block6_garment = UNetBlockNoAttention(block_channel=512,
+                                                   clip_dim=pose_embed_len_dim,
+                                                   res_blocks_number=6)
