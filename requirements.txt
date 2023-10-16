@@ -5,3 +5,4 @@ pillow
 matplotlib
 tqdm
 torchvision
+einops
