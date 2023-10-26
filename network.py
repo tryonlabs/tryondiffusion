@@ -6,6 +6,8 @@ from einops import rearrange, repeat
 
 import math
 
+from utils.utils import GaussianSmoothing
+
 
 class DownSample(nn.Module):
 
@@ -89,7 +91,7 @@ class AttentionPool1d(nn.Module):
 
         self.pos_encoding = SinusoidalPosEmbed(pose_embeb_dim)
 
-    def forward(self, x, time_step):
+    def forward(self, x, time_step, noise_level=0.3):
         # if x in format NCP
         # N - Batch Dimension, P - Pose Dimension, C - No. of pose(person and garment)
         x = x.permute(1, 0, 2)
@@ -115,11 +117,20 @@ class AttentionPool1d(nn.Module):
             training=self.training,
             need_weights=False
         )
-        x = x.squeeze(0)
-        # time_step = torch.randint(0, 1000, (batch_size,)).long()
-        if time_step is not None:
-            x += self.pos_encoding(time_step).squeeze(1)
-        return x
+        # x = x.squeeze(0)
+        x = x.permute(1, 0, 2)
+
+        smoothing = GaussianSmoothing(channels=1,
+                                      kernel_size=3,
+                                      sigma=noise_level,
+                                      conv_dim=1)
+
+        x_noisy = smoothing(F.pad(x, (1, 1), mode='reflect'))
+
+        x = x + x_noisy
+
+        x += self.pos_encoding(time_step)[:, None, :]
+        return x.squeeze(1)
 
 
 class FiLM(nn.Module):
@@ -542,7 +553,7 @@ class UNet128(nn.Module):
                                                    res_blocks_number=6)
         # ==========================garment UNet ends==============================
 
-    def forward(self, zt, ic, person_pose_embedding, garment_pose_embedding, time_step):
+    def forward(self, zt, ic, person_pose_embedding, garment_pose_embedding, time_step, noise_level):
         """
 
         :param zt:
@@ -559,7 +570,7 @@ class UNet128(nn.Module):
         pose_embeddings = torch.concat((person_pose_embedding, garment_pose_embedding), dim=1)
 
         # get clip embeddings
-        clip_embedding = self.attn_pool_layer(pose_embeddings, time_step)
+        clip_embedding = self.attn_pool_layer(pose_embeddings, time_step, noise_level)
 
         # passing through initial conv layer
         ic = self.init_conv_garment(ic)
@@ -744,7 +755,7 @@ class UNet64(nn.Module):
                                                    res_blocks_number=6)
         # ==========================garment UNet ends==============================
 
-    def forward(self, zt, ic, person_pose_embedding, garment_pose_embedding, time_step):
+    def forward(self, zt, ic, person_pose_embedding, garment_pose_embedding, time_step, noise_level):
         """
 
         :param zt:
@@ -761,7 +772,7 @@ class UNet64(nn.Module):
         pose_embeddings = torch.concat((person_pose_embedding, garment_pose_embedding), dim=1)
 
         # get clip embeddings
-        clip_embedding = self.attn_pool_layer(pose_embeddings, time_step)
+        clip_embedding = self.attn_pool_layer(pose_embeddings, time_step, noise_level)
 
         # passing through initial conv layer
         ic = self.init_conv_garment(ic)
@@ -849,3 +860,8 @@ if __name__ == "__main__":
               time_step)
 
     print(out.size())
+
+    # att = AttentionPool1d(16)
+    # time_step = torch.randint(0, 1000, (4,)).long()
+    # out = att(torch.randn(4, 2, 16), time_step, None)
+    # print(out.size())
