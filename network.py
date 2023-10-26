@@ -848,20 +848,20 @@ class UNet64(nn.Module):
 
 if __name__ == "__main__":
 
-    # time_step = torch.randint(low=1, high=1000, size=(4,))
-    #
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # # device = torch.device("cpu")
-    # net = UNet128(16).to(device)
-    # out = net(torch.randn(4, 6, 128, 128).to(device),
-    #           torch.randn(4, 3, 128, 128).to(device),
-    #           torch.randn(4, 1, 16).to(device),
-    #           torch.randn(4, 1, 16).to(device),
-    #           time_step)
-    #
-    # print(out.size())
+    time_step = torch.randint(low=1, high=1000, size=(4,))
 
-    att = AttentionPool1d(16)
-    time_step = torch.randint(0, 1000, (4,)).long()
-    out = att(torch.randn(4, 2, 16), time_step, None)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
+    net = UNet128(16).to(device)
+    out = net(torch.randn(4, 6, 128, 128).to(device),
+              torch.randn(4, 3, 128, 128).to(device),
+              torch.randn(4, 1, 16).to(device),
+              torch.randn(4, 1, 16).to(device),
+              time_step)
+
     print(out.size())
+
+    # att = AttentionPool1d(16)
+    # time_step = torch.randint(0, 1000, (4,)).long()
+    # out = att(torch.randn(4, 2, 16), time_step, None)
+    # print(out.size())

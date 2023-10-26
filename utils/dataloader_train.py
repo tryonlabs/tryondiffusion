@@ -54,11 +54,11 @@ class UNet128DatasetTrain(Dataset):
         ia = read_img(self.ia_paths[item])
         ic = read_img(self.ic_paths[item])
 
+        # ToDo: move this to training later and pass sigma to 'forward' of network
+
         # As suggested in:
         # https://jmlr.csail.mit.edu/papers/volume23/21-0635/21-0635.pdf Section 4.4
         # sigma = torch.FloatTensor(1).uniform_(0.4, 0.6)
-
-        # ToDo: move this to training later
 
         # smoothing2d = GaussianSmoothing(channels=3,
         #                                 kernel_size=3,
