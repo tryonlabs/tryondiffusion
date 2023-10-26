@@ -196,7 +196,7 @@ class SelfAttention(nn.Module):
 
         self.norm = LayerNorm(dim)
 
-        self.null_kv = nn.Parameter(torch.randn(2, dim_head))
+        # self.null_kv = nn.Parameter(torch.randn(2, dim_head))
         self.to_q = nn.Linear(dim, inner_dim, bias=False)
         self.to_kv = nn.Linear(dim, dim_head * 2, bias=False)
 
@@ -218,9 +218,9 @@ class SelfAttention(nn.Module):
         q = rearrange(q, 'b n (h d) -> b h n d', h=self.heads)
 
         # add null key / value for classifier free guidance in prior net
-        nk, nv = map(lambda t: repeat(t, 'd -> b 1 d', b=b), self.null_kv.unbind(dim=-2))
-        k = torch.cat((nk, k), dim=-2)
-        v = torch.cat((nv, v), dim=-2)
+        # nk, nv = map(lambda t: repeat(t, 'd -> b 1 d', b=b), self.null_kv.unbind(dim=-2))
+        # k = torch.cat((nk, k), dim=-2)
+        # v = torch.cat((nv, v), dim=-2)
 
         # add pose conditioning
         ck, cv = self.to_context(pose_embed).chunk(2, dim=-1)
@@ -277,7 +277,7 @@ class CrossAttention(nn.Module):
         self.norm_zt = LayerNorm(zt_dim)
         self.norm_ic = LayerNorm(ic_dim)
 
-        self.null_kv = nn.Parameter(torch.randn(2, dim_head))
+        # self.null_kv = nn.Parameter(torch.randn(2, dim_head))
         self.to_q = nn.Linear(zt_dim, inner_dim, bias=False)
         self.to_kv = nn.Linear(ic_dim, dim_head * 2, bias=False)
 
@@ -301,9 +301,9 @@ class CrossAttention(nn.Module):
         q = rearrange(q, 'b n (h d) -> b h n d', h=self.heads)
 
         # add null key / value for classifier free guidance in prior net
-        nk, nv = map(lambda t: repeat(t, 'd -> b 1 d', b=b), self.null_kv.unbind(dim=-2))
-        k = torch.cat((nk, k), dim=-2)
-        v = torch.cat((nv, v), dim=-2)
+        # nk, nv = map(lambda t: repeat(t, 'd -> b 1 d', b=b), self.null_kv.unbind(dim=-2))
+        # k = torch.cat((nk, k), dim=-2)
+        # v = torch.cat((nv, v), dim=-2)
 
         # qk rmsnorm
 
@@ -556,11 +556,12 @@ class UNet128(nn.Module):
     def forward(self, zt, ic, person_pose_embedding, garment_pose_embedding, time_step, noise_level):
         """
 
-        :param zt:
-        :param ic:
+        :param zt: rgb_agnostic and noisy ground truth concatenated across channels
+        :param ic: segmented garment
         :param person_pose_embedding: [b, 1, vector_length]
         :param garment_pose_embedding: [b, 1, vector_length]
         :param time_step:
+        :param noise_level: sigma sampled from uniform distribution
         :return:
         """
 
