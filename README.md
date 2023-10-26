@@ -1,5 +1,7 @@
 # Try On Diffusion: A Tale of Two UNets Implementation
-[Paper Link](https://arxiv.org/abs/2306.08276)
+### [Paper Link](https://arxiv.org/abs/2306.08276)
+
+### [Click here](https://discord.gg/T5mPpZHxkY) to join our discord channel
 
 ## How to contribute to tryondiffusion
 
