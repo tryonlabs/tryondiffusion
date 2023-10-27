@@ -2,6 +2,7 @@ import cv2
 import json
 import math
 import numbers
+import os
 
 import torch
 from torch import nn
@@ -84,6 +85,14 @@ class GaussianSmoothing(nn.Module):
             filtered (torch.Tensor): Filtered output.
         """
         return self.conv(input, weight=self.weight, groups=self.groups)
+
+
+def mk_folders(run_name):
+    os.makedirs("models", exist_ok=True)
+    os.makedirs("results", exist_ok=True)
+    os.makedirs(os.path.join("models", run_name), exist_ok=True)
+    os.makedirs(os.path.join("results", run_name), exist_ok=True)
+    os.makedirs(os.path.join("results", run_name, "images"), exist_ok=True)
 
 
 if __name__ == "__main__":
