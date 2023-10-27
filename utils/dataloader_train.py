@@ -1,25 +1,50 @@
 import os
-import cv2
-import json
 
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.nn import functional as F
+from torchvision import transforms as T
 
 from utils import load_json, read_img, GaussianSmoothing
 
 
-class UNet128DatasetTrain(Dataset):
+class ToPaddedTensorImages:
+
+    def __call__(self, image):
+        """Padding image so that aspect ratio is maintained.
+        And converting numpy arrays to tensors."""
+        # cv2 image: H x W x C
+        # torch image: C X H X W
+
+        img = image.transpose((2, 0, 1))
+        img = torch.from_numpy(img.copy()).float()
+
+        if img.shape[1] > img.shape[2]:
+            pad_size = (img.shape[1] - img.shape[2]) // 2
+            padding = (pad_size, pad_size, 0, 0)
+        elif img.shape[2] > img.shape[1]:
+            pad_size = (img.shape[2] - img.shape[1]) // 2
+            padding = (0, 0, pad_size, pad_size)
+        else:
+            padding = (0, 0, 0, 0)
+
+        img = F.pad(img, padding, "constant", 255)
+
+        return img
+
+
+class ToTensorEmbed:
+
+    def __call__(self, pose_embed):
+
+        return torch.from_numpy(pose_embed)
+
+
+class UNetDataset(Dataset):
     """ This class is to be used while training, where all the conditional inputs and ground
      truth is pre-saved and are pre-processed."""
 
-    def __init__(self,
-                 ip_dir="../train/data/ip",
-                 jp_dir="../train/data/jp",
-                 jg_dir="../train/data/jg",
-                 ia_dir="../train/data/ia",
-                 ic_dir="../train/data/ic"
-                 ):
+    def __init__(self, ip_dir, jp_dir, jg_dir, ia_dir, ic_dir, unet_size):
         """
         Get all the inputs from ../data directory in the main project directory
         :param ip_dir: Image of target person with source clothing on. Later
@@ -44,6 +69,16 @@ class UNet128DatasetTrain(Dataset):
         self.ic_list = os.listdir(ic_dir)
         self.ic_paths = [os.path.join(ic_dir, i) for i in self.ic_list]
 
+        self.transforms_imgs = T.Compose([
+            ToPaddedTensorImages(),
+            T.Resize(unet_size),
+            T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ])
+
+        self.transform_embeds = T.Compose([
+            ToTensorEmbed()
+        ])
+
     def __len__(self):
         return len(self.ip_list)
 
@@ -54,22 +89,10 @@ class UNet128DatasetTrain(Dataset):
         ia = read_img(self.ia_paths[item])
         ic = read_img(self.ic_paths[item])
 
-        # ToDo: move this to training later and pass sigma to 'forward' of network
-
-        # As suggested in:
-        # https://jmlr.csail.mit.edu/papers/volume23/21-0635/21-0635.pdf Section 4.4
-        # sigma = torch.FloatTensor(1).uniform_(0.4, 0.6)
-
-        # smoothing2d = GaussianSmoothing(channels=3,
-        #                                 kernel_size=3,
-        #                                 sigma=sigma,
-        #                                 conv_dim=2)
-        #
-        # # using same kernel for both images
-        # ia = F.pad(ia, (1, 1, 1, 1), mode='reflect')
-        # ia = smoothing2d(ia)
-        #
-        # ip = F.pad(ip, (1, 1, 1, 1), mode='reflect')
-        # ip = smoothing2d(ip)
+        ip = self.transforms_imgs(ip)
+        jp = self.transform_embeds(jp)
+        jg = self.transform_embeds(jg)
+        ia = self.transforms_imgs(ia)
+        ic = self.transforms_imgs(ic)
 
         return ip, jp, jg, ia, ic
