@@ -92,12 +92,13 @@ class Diffusion:
             ic = smoothen_image(ic, sigma)
 
             x = torch.randn(batch_size, self.noise_input_channel, self.unet_dim, self.unet_dim).to(self.device)
-            # concatenating noise with rgb agnostic image across channels
-            # corrupt -> concatenate -> predict
-            x = torch.cat((x, ia), dim=1)
 
             # paper says to add noise augmentation to input noise during inference
             x = smoothen_image(x, sigma)
+
+            # concatenating noise with rgb agnostic image across channels
+            # corrupt -> concatenate -> predict
+            x = torch.cat((x, ia), dim=1)
 
             for i in reversed(range(1, self.time_steps)):
                 t = (torch.ones(batch_size) * i).long().to(self.device)
