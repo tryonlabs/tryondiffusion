@@ -611,7 +611,7 @@ class UNet128(nn.Module):
 
         # 16 - garment
         ic_16_2 = self.block5_garment(ic_16_1, clip_embedding)
-        ic_16_2 = ic_16_2 + ic_16_1
+        ic_16_2 = torch.concat((ic_16_2, ic_16_1), dim=1)
         # print(f"ic 16 decoder {ic_16_2.size()}")
 
         # 16 - person
@@ -622,24 +622,24 @@ class UNet128(nn.Module):
         # 32 - garment
         ic = self.upsample1_garment(ic_16_2, pos_encoding)
         ic_32_2 = self.block6_garment(ic, clip_embedding)
-        ic_32_2 = ic_32_2 + ic_32_1
+        ic_32_2 = torch.concat((ic_32_2, ic_32_1), dim=1)
         # print(f"ic 32 decoder {ic_32_2.size()}")
 
         # 32 - person
         zt = self.upsample1_person(zt_16_2, pos_encoding)
         zt_32_2 = self.block6_person(zt, clip_embedding, pose_embeddings, ic_32_2)
-        zt_32_2 = zt_32_2 + zt_32_1
+        zt_32_2 = torch.concat((zt_32_2, zt_32_1), dim=1)
         # print(f"zt 32 decoder {zt_32_2.size()}")
 
         # 64 - person
         zt = self.upsample2_person(zt_32_2, pos_encoding)
         zt_64_2 = self.block7_person(zt, clip_embedding)
-        zt_64_2 = zt_64_2 + zt_64_1
+        zt_64_2 = torch.concat((zt_64_2, zt_64_1), dim=1)
 
         # 128 - person
         zt = self.upsample3_person(zt_64_2, pos_encoding)
         zt_128_2 = self.block8_person(zt, clip_embedding)
-        zt_128_2 = zt_128_2 + zt_128_1
+        zt_128_2 = torch.concat((zt_128_2, zt_128_1), dim=1)
 
         # final conv layer - person
         zt = self.final_conv_person(zt_128_2)
@@ -812,28 +812,28 @@ class UNet64(nn.Module):
 
         # 16 - garment
         ic_16_2 = self.block5_garment(ic_16_1, clip_embedding)
-        ic_16_2 = ic_16_2 + ic_16_1
+        ic_16_2 = torch.concat((ic_16_2, ic_16_1), dim=1)
 
         # 16 - person
         zt_16_2 = self.block5_person(zt_16_1, clip_embedding, pose_embeddings, ic_16_2)
-        zt_16_2 = zt_16_2 + zt_16_1
+        zt_16_2 = torch.concat((zt_16_2, zt_16_1), dim=1)
 
         # 32 - garment
         ic = self.upsample1_garment(ic_16_2, pos_encoding)
         ic_32_2 = self.block6_garment(ic, clip_embedding)
-        ic_32_2 = ic_32_2 + ic_32_1
+        ic_32_2 = torch.concat((ic_32_2, ic_32_1), dim=1)
         # print(f"ic 32 decoder {ic_32_2.size()}")
 
         # 32 - person
         zt = self.upsample1_person(zt_16_2, pos_encoding)
         zt_32_2 = self.block6_person(zt, clip_embedding, pose_embeddings, ic_32_2)
-        zt_32_2 = zt_32_2 + zt_32_1
+        zt_32_2 = torch.concat((zt_32_2, zt_32_1), dim=1)
         # print(f"zt 32 decoder {zt_32_2.size()}")
 
         # 64 - person
         zt = self.upsample2_person(zt_32_2, pos_encoding)
         zt_64_2 = self.block7_person(zt, clip_embedding)
-        zt_64_2 = zt_64_2 + zt_64_1
+        zt_64_2 = torch.concat((zt_64_2, zt_64_1), dim=1)
         # print(f"zt 64 decoder {zt_64_2.size()}")
 
         # 128 - person
