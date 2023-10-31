@@ -19,6 +19,11 @@ def read_img(img_path):
     return img
 
 
+def write_img(img, folder_path, img_name):
+    path = os.path.join(folder_path, img_name)
+    cv2.imwrite(path, img)
+
+
 class GaussianSmoothing(nn.Module):
     """
     Source: https://discuss.pytorch.org/t/is-there-anyway-to-do-gaussian-filtering-for-an-image-2d-3d-in-pytorch/12351/10?u=tanay_agrawal

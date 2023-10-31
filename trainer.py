@@ -7,17 +7,19 @@ class ArgParser:
 
         self.run_name = "1"
 
-        self.train_ip_folder = "data/train/ip"
-        self.train_jp_folder = "data/train/jp"
-        self.train_ia_folder = "data/train/ia"
-        self.train_ic_folder = "data/train/ic"
+        self.train_ip_folder = "data/test_flow/train/ip"
+        self.train_jp_folder = "data/test_flow/train/jp"
+        self.train_ia_folder = "data/test_flow/train/ia"
+        self.train_ic_folder = "data/test_flow/train/ic"
+        self.train_jg_folder = "data/test_flow/train/jg"
 
-        self.validation_ip_folder = "data/validation/ip"
-        self.validation_jp_folder = "data/validation/jp"
-        self.validation_ia_folder = "data/validation/ia"
-        self.validation_ic_folder = "data/validation/ic"
+        self.validation_ip_folder = "data/test_flow/validation/ip"
+        self.validation_jp_folder = "data/test_flow/validation/jp"
+        self.validation_ia_folder = "data/test_flow/validation/ia"
+        self.validation_ic_folder = "data/test_flow/validation/ic"
+        self.validation_jg_folder = "data/test_flow/validation/jg"
 
-        self.batch_size_train = 8
+        self.batch_size_train = 1
         self.batch_size_validation = 1
 
         self.lr = 0.0001
@@ -30,7 +32,7 @@ class ArgParser:
 
 
 args = ArgParser()
-diffusion = Diffusion(device="cuda", pose_embed_dim=16)
+diffusion = Diffusion(device="cuda", pose_embed_dim=8)
 
 diffusion.prepare(args)
 diffusion.fit(args)
