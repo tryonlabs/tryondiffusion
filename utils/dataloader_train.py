@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.nn import functional as F
 from torchvision import transforms as T
 
-from utils import load_pose_embed, read_img, GaussianSmoothing
+from utils import load_pose_embed, read_img
 
 
 class ToPaddedTensorImages:
