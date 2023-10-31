@@ -568,7 +568,7 @@ class UNet128(nn.Module):
         pos_encoding = self.pos_encod_layer(time_step)
 
         # concat pose embeddings
-        pose_embeddings = torch.concat((person_pose_embedding, garment_pose_embedding), dim=1)
+        pose_embeddings = torch.concat((person_pose_embedding[:, None, :], garment_pose_embedding[:, None, :]), dim=1)
 
         # get clip embeddings
         clip_embedding = self.attn_pool_layer(pose_embeddings, time_step, noise_level)
@@ -770,7 +770,7 @@ class UNet64(nn.Module):
         pos_encoding = self.pos_encod_layer(time_step)
 
         # concat pose embeddings
-        pose_embeddings = torch.concat((person_pose_embedding, garment_pose_embedding), dim=1)
+        pose_embeddings = torch.concat((person_pose_embedding[:, None, :], garment_pose_embedding[:, None, :]), dim=1)
 
         # get clip embeddings
         clip_embedding = self.attn_pool_layer(pose_embeddings, time_step, noise_level)

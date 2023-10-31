@@ -236,7 +236,7 @@ class Diffusion:
     def fit(self, args):
 
         logging.info(f"Starting training")
-        for epoch in args.epochs:
+        for epoch in range(args.epochs):
             logging.info(f"Starting Epoch: {epoch+1}")
             _ = self.single_epoch(train=True)
 

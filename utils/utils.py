@@ -9,15 +9,19 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def load_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        d = json.load(f)
-    return d
+def load_pose_embed(file_path):
+    embed = torch.load(file_path)
+    return embed
 
 
 def read_img(img_path):
     img = cv2.imread(img_path)
     return img
+
+
+def write_img(img, folder_path, img_name):
+    path = os.path.join(folder_path, img_name)
+    cv2.imwrite(path, img)
 
 
 class GaussianSmoothing(nn.Module):
