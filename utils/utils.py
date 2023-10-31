@@ -9,10 +9,9 @@ from torch import nn
 from torch.nn import functional as F
 
 
-def load_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        d = json.load(f)
-    return d
+def load_pose_embed(file_path):
+    embed = torch.load(file_path)
+    return embed
 
 
 def read_img(img_path):
