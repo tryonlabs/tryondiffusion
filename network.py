@@ -75,7 +75,7 @@ class SinusoidalPosEmbed(nn.Module):
 
 class AttentionPool1d(nn.Module):
 
-    def __init__(self, pose_embeb_dim, num_heads=1):
+    def __init__(self, pose_embeb_dim, device, num_heads=1):
         """
         Clip inspired 1D attention pooling, reduce garment and person pose along keypoints
         :param pose_embeb_dim: pose embedding dimensions
@@ -90,6 +90,8 @@ class AttentionPool1d(nn.Module):
         self.num_heads = num_heads
 
         self.pos_encoding = SinusoidalPosEmbed(pose_embeb_dim)
+
+        self.device = device
 
     def forward(self, x, time_step, noise_level=0.3):
         # if x in format NCP
@@ -123,7 +125,7 @@ class AttentionPool1d(nn.Module):
         smoothing = GaussianSmoothing(channels=1,
                                       kernel_size=3,
                                       sigma=noise_level,
-                                      conv_dim=1)
+                                      conv_dim=1).to(self.device)
 
         x_noisy = smoothing(F.pad(x, (1, 1), mode='reflect'))
 
@@ -446,13 +448,13 @@ class UNetBlockAttention(nn.Module):
 
 class UNet128(nn.Module):
 
-    def __init__(self, pose_embed_len_dim, time_dim=256):
+    def __init__(self, pose_embed_len_dim, device, time_dim=256):
         super().__init__()
 
         self.pos_encod_layer = SinusoidalPosEmbed(time_dim)
 
         # process clip embeddings
-        self.attn_pool_layer = AttentionPool1d(pose_embed_len_dim)
+        self.attn_pool_layer = AttentionPool1d(pose_embed_len_dim, device)
 
         # =========================person UNet================================
         # initial image embedding size 128x128 and 6 channels(concatenate
@@ -649,13 +651,13 @@ class UNet128(nn.Module):
 
 class UNet64(nn.Module):
 
-    def __init__(self, pose_embed_len_dim, time_dim=256):
+    def __init__(self, pose_embed_len_dim, device, time_dim=256):
         super().__init__()
 
         self.pos_encod_layer = SinusoidalPosEmbed(time_dim)
 
         # process clip embeddings
-        self.attn_pool_layer = AttentionPool1d(pose_embed_len_dim)
+        self.attn_pool_layer = AttentionPool1d(pose_embed_len_dim, device)
 
         # =========================person UNet================================
         # initial image embedding size 128x128 and 6 channels(concatenate
@@ -851,14 +853,15 @@ if __name__ == "__main__":
 
     time_step = torch.randint(low=1, high=1000, size=(4,))
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # device = torch.device("cpu")
-    net = UNet128(16).to(device)
-    out = net(torch.randn(4, 6, 128, 128).to(device),
-              torch.randn(4, 3, 128, 128).to(device),
-              torch.randn(4, 1, 16).to(device),
-              torch.randn(4, 1, 16).to(device),
-              time_step)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
+    net = UNet64(8, device).to(device)
+    out = net(torch.randn(4, 6, 64, 64).to(device),
+              torch.randn(4, 3, 64, 64).to(device),
+              torch.randn(4, 8).to(device),
+              torch.randn(4, 8).to(device),
+              time_step.to(device),
+              0.3)
 
     print(out.size())
 
