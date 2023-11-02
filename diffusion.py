@@ -113,7 +113,7 @@ class Diffusion:
 
             for i in reversed(range(1, self.time_steps)):
                 t = (torch.ones(batch_size) * i).long().to(self.device)
-                predicted_noise = model(x, ic, jp, jg, t)
+                predicted_noise = model(x, ic, jp, jg, t, sigma)
                 # ToDo: Add Classifier-Free Guidance with guidance weight 2
                 alpha = self.alpha[t][:, None, None, None]
                 alpha_cumprod = self.alpha_cumprod[t][:, None, None, None]
