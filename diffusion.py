@@ -102,14 +102,14 @@ class Diffusion:
             ia = smoothen_image(ia, sigma)
             ic = smoothen_image(ic, sigma)
 
-            network_noise = torch.randn(batch_size, self.noise_input_channel, self.unet_dim, self.unet_dim).to(self.device)
+            inp_network_noise = torch.randn(batch_size, self.noise_input_channel, self.unet_dim, self.unet_dim).to(self.device)
 
             # paper says to add noise augmentation to input noise during inference
-            network_noise = smoothen_image(network_noise, sigma)
+            inp_network_noise = smoothen_image(inp_network_noise, sigma)
 
             # concatenating noise with rgb agnostic image across channels
             # corrupt -> concatenate -> predict
-            x = torch.cat((network_noise, ia), dim=1)
+            x = torch.cat((inp_network_noise, ia), dim=1)
 
             for i in reversed(range(1, self.time_steps)):
                 t = (torch.ones(batch_size) * i).long().to(self.device)
@@ -119,14 +119,14 @@ class Diffusion:
                 alpha_cumprod = self.alpha_cumprod[t][:, None, None, None]
                 beta = self.beta[t][:, None, None, None]
                 if i > 1:
-                    noise = torch.randn_like(network_noise)
+                    noise = torch.randn_like(inp_network_noise)
                 else:
-                    noise = torch.zeros_like(network_noise)
+                    noise = torch.zeros_like(inp_network_noise)
 
-                network_noise = 1 / torch.sqrt(alpha) * (network_noise - ((1 - alpha) / (torch.sqrt(1 - alpha_cumprod))) * predicted_noise) + torch.sqrt(beta) * noise
-        x = (x.clamp(-1, 1) + 1) / 2
-        x = (x * 255).type(torch.uint8)
-        return x
+                inp_network_noise = 1 / torch.sqrt(alpha) * (inp_network_noise - ((1 - alpha) / (torch.sqrt(1 - alpha_cumprod))) * predicted_noise) + torch.sqrt(beta) * noise
+        inp_network_noise = (inp_network_noise.clamp(-1, 1) + 1) / 2
+        inp_network_noise = (inp_network_noise * 255).type(torch.uint8)
+        return inp_network_noise
 
     def prepare(self, args):
         mk_folders(args.run_name)
