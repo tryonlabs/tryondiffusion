@@ -500,20 +500,20 @@ class UNet128(nn.Module):
                                                 clip_dim=pose_embed_len_dim,
                                                 res_blocks_number=6,
                                                 hw_dim=32)
-        self.upsample2_person = UpSample(dim=512, dim_out=256, t_emb_dim=time_dim)
+        self.upsample2_person = UpSample(dim=1024, dim_out=256, t_emb_dim=time_dim)
 
         # 64 unit decoder person
         self.block7_person = UNetBlockNoAttention(block_channel=256,
                                                   clip_dim=pose_embed_len_dim,
                                                   res_blocks_number=4)
-        self.upsample3_person = UpSample(dim=256, dim_out=128, t_emb_dim=time_dim)
+        self.upsample3_person = UpSample(dim=512, dim_out=128, t_emb_dim=time_dim)
 
         # 128 unit decoder person
         self.block8_person = UNetBlockNoAttention(block_channel=128,
                                                   clip_dim=pose_embed_len_dim,
                                                   res_blocks_number=3)
 
-        self.final_conv_person = nn.Conv2d(128, 3, (3, 3), padding=1)
+        self.final_conv_person = nn.Conv2d(256, 3, (3, 3), padding=1)
         # ==========================person UNet ends==========================
 
         # ==========================garment UNet==============================
@@ -547,7 +547,7 @@ class UNet128(nn.Module):
         self.block5_garment = UNetBlockNoAttention(block_channel=1024,
                                                    clip_dim=pose_embed_len_dim,
                                                    res_blocks_number=7)
-        self.upsample1_garment = UpSample(dim=1024, dim_out=512, t_emb_dim=time_dim)
+        self.upsample1_garment = UpSample(dim=2048, dim_out=512, t_emb_dim=time_dim)
 
         # 32 unit decoder garment
         self.block6_garment = UNetBlockNoAttention(block_channel=512,
@@ -696,14 +696,14 @@ class UNet64(nn.Module):
                                                 clip_dim=pose_embed_len_dim,
                                                 res_blocks_number=7,
                                                 hw_dim=16)
-        self.upsample1_person = UpSample(dim=1024, dim_out=512, t_emb_dim=time_dim)
+        self.upsample1_person = UpSample(dim=2048, dim_out=512, t_emb_dim=time_dim)
 
         # 32 unit decoder person
         self.block6_person = UNetBlockAttention(block_channel=512,
                                                 clip_dim=pose_embed_len_dim,
                                                 res_blocks_number=6,
                                                 hw_dim=32)
-        self.upsample2_person = UpSample(dim=512, dim_out=256, t_emb_dim=time_dim)
+        self.upsample2_person = UpSample(dim=1024, dim_out=256, t_emb_dim=time_dim)
 
         # 64 unit decoder person
         self.block7_person = UNetBlockNoAttention(block_channel=256,
@@ -716,7 +716,7 @@ class UNet64(nn.Module):
         #                                           clip_dim=pose_embed_len_dim,
         #                                           res_blocks_number=3)
 
-        self.final_conv_person = nn.Conv2d(256, 3, (3, 3), padding=1)
+        self.final_conv_person = nn.Conv2d(512, 3, (3, 3), padding=1)
         # ==========================person UNet ends==========================
 
         # ==========================garment UNet==============================
@@ -750,7 +750,7 @@ class UNet64(nn.Module):
         self.block5_garment = UNetBlockNoAttention(block_channel=1024,
                                                    clip_dim=pose_embed_len_dim,
                                                    res_blocks_number=7)
-        self.upsample1_garment = UpSample(dim=1024, dim_out=512, t_emb_dim=time_dim)
+        self.upsample1_garment = UpSample(dim=2048, dim_out=512, t_emb_dim=time_dim)
 
         # 32 unit decoder garment
         self.block6_garment = UNetBlockNoAttention(block_channel=512,
