@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.nn import functional as F
 from torchvision import transforms as T
 
-from utils import load_json, read_img, GaussianSmoothing
+from .utils import load_pose_embed, read_img
 
 
 class ToPaddedTensorImages:
@@ -75,23 +75,17 @@ class UNetDataset(Dataset):
             T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ])
 
-        self.transform_embeds = T.Compose([
-            ToTensorEmbed()
-        ])
-
     def __len__(self):
         return len(self.ip_list)
 
     def __getitem__(self, item):
         ip = read_img(self.ip_paths[item])
-        jp = load_json(self.jp_paths[item])
-        jg = load_json(self.jg_paths[item])
+        jp = load_pose_embed(self.jp_paths[item])
+        jg = load_pose_embed(self.jg_paths[item])
         ia = read_img(self.ia_paths[item])
         ic = read_img(self.ic_paths[item])
 
         ip = self.transforms_imgs(ip)
-        jp = self.transform_embeds(jp)
-        jg = self.transform_embeds(jg)
         ia = self.transforms_imgs(ia)
         ic = self.transforms_imgs(ic)
 
