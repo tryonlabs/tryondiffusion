@@ -209,7 +209,7 @@ class Diffusion:
 
     def logging_images(self, epoch, run_name):
 
-        for idx, ip, jp, jg, ia, ic in enumerate(self.val_dataloader):
+        for idx, (ip, jp, jg, ia, ic) in enumerate(self.val_dataloader):
             # sampled image
             sampled_image = self.sample(use_ema=False, conditional_inputs=(ic, jp, jg, ia))
             sampled_image = sampled_image[0].permute(1, 2, 0).squeeze().cpu().numpy()
