@@ -102,31 +102,31 @@ class Diffusion:
             ia = smoothen_image(ia, sigma)
             ic = smoothen_image(ic, sigma)
 
-            x = torch.randn(batch_size, self.noise_input_channel, self.unet_dim, self.unet_dim).to(self.device)
+            inp_network_noise = torch.randn(batch_size, self.noise_input_channel, self.unet_dim, self.unet_dim).to(self.device)
 
             # paper says to add noise augmentation to input noise during inference
-            x = smoothen_image(x, sigma)
+            inp_network_noise = smoothen_image(inp_network_noise, sigma)
 
             # concatenating noise with rgb agnostic image across channels
             # corrupt -> concatenate -> predict
-            x = torch.cat((x, ia), dim=1)
+            x = torch.cat((inp_network_noise, ia), dim=1)
 
             for i in reversed(range(1, self.time_steps)):
                 t = (torch.ones(batch_size) * i).long().to(self.device)
-                predicted_noise = model(x, ic, jp, jg, t)
+                predicted_noise = model(x, ic, jp, jg, t, sigma)
                 # ToDo: Add Classifier-Free Guidance with guidance weight 2
                 alpha = self.alpha[t][:, None, None, None]
                 alpha_cumprod = self.alpha_cumprod[t][:, None, None, None]
                 beta = self.beta[t][:, None, None, None]
                 if i > 1:
-                    noise = torch.randn_like(x)
+                    noise = torch.randn_like(inp_network_noise)
                 else:
-                    noise = torch.zeros_like(x)
+                    noise = torch.zeros_like(inp_network_noise)
 
-                x = 1 / torch.sqrt(alpha) * (x - ((1 - alpha) / (torch.sqrt(1 - alpha_cumprod))) * predicted_noise) + torch.sqrt(beta) * noise
-        x = (x.clamp(-1, 1) + 1) / 2
-        x = (x * 255).type(torch.uint8)
-        return x
+                inp_network_noise = 1 / torch.sqrt(alpha) * (inp_network_noise - ((1 - alpha) / (torch.sqrt(1 - alpha_cumprod))) * predicted_noise) + torch.sqrt(beta) * noise
+        inp_network_noise = (inp_network_noise.clamp(-1, 1) + 1) / 2
+        inp_network_noise = (inp_network_noise * 255).type(torch.uint8)
+        return inp_network_noise
 
     def prepare(self, args):
         mk_folders(args.run_name)
@@ -209,7 +209,7 @@ class Diffusion:
 
     def logging_images(self, epoch, run_name):
 
-        for idx, ip, jp, jg, ia, ic in enumerate(self.val_dataloader):
+        for idx, (ip, jp, jg, ia, ic) in enumerate(self.val_dataloader):
             # sampled image
             sampled_image = self.sample(use_ema=False, conditional_inputs=(ic, jp, jg, ia))
             sampled_image = sampled_image[0].permute(1, 2, 0).squeeze().cpu().numpy()
@@ -235,10 +235,10 @@ class Diffusion:
             cv2.imwrite(os.path.join(images_folder, "cloth_agnostic_rgb.png"), ia_np)
 
             # save sampled image
-            cv2.imwrite(os.path.join(images_folder, "sampled_image"), sampled_image)
+            cv2.imwrite(os.path.join(images_folder, "sampled_image.png"), sampled_image)
 
             # save ema sampled image
-            cv2.imwrite(os.path.join(images_folder, "ema_sampled_image"), ema_sampled_image)
+            cv2.imwrite(os.path.join(images_folder, "ema_sampled_image.png"), ema_sampled_image)
 
     def save_models(self, run_name, epoch=-1):
 
