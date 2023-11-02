@@ -235,10 +235,10 @@ class Diffusion:
             cv2.imwrite(os.path.join(images_folder, "cloth_agnostic_rgb.png"), ia_np)
 
             # save sampled image
-            cv2.imwrite(os.path.join(images_folder, "sampled_image"), sampled_image)
+            cv2.imwrite(os.path.join(images_folder, "sampled_image.png"), sampled_image)
 
             # save ema sampled image
-            cv2.imwrite(os.path.join(images_folder, "ema_sampled_image"), ema_sampled_image)
+            cv2.imwrite(os.path.join(images_folder, "ema_sampled_image.png"), ema_sampled_image)
 
     def save_models(self, run_name, epoch=-1):
 
