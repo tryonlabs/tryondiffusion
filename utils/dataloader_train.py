@@ -28,7 +28,7 @@ class ToPaddedTensorImages:
         else:
             padding = (0, 0, 0, 0)
 
-        img = F.pad(img, padding, "constant", 255)
+        img = F.pad(img, padding, "constant", 0)
 
         return img
 

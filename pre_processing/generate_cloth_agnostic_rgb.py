@@ -11,17 +11,23 @@ def generate_rgb_agnostic(img, img_agnostic_parse_map):
 if __name__ == "__main__":
     import os
     import sys
+    from tqdm import tqdm
 
     parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sys.path.insert(0, parentdir)
 
-    from utils.utils import read_img, write_img
+    from utils import read_img, write_img
 
-    img = read_img("../../../zalando-hd-resized/train/image/00000_00.jpg")
-    img_agnostic_parse_map = read_img("../../../zalando-hd-resized/train/image-parse-agnostic-v3.2/00000_00.png")
+    imgs_folder = sorted(os.listdir("../../../zalando-hd-resized/train/image/"))
+    imgs_agnostic_parse_map_folder = sorted(os.listdir("../../../zalando-hd-resized/train/image-parse-agnostic-v3.2/"))
 
-    rgb_agnostic = generate_rgb_agnostic(img, img_agnostic_parse_map)
+    for img_name, img_agnostic_parse_map in tqdm(zip(imgs_folder, imgs_agnostic_parse_map_folder)):
+        img = read_img(os.path.join("../../../zalando-hd-resized/train/image/", img_name))
+        img_agnostic_parse_map = read_img(os.path.join("../../../zalando-hd-resized/train/image-parse-agnostic-v3.2/",
+                                                       img_agnostic_parse_map))
 
-    write_img(rgb_agnostic, "../data/test_flow/train/ia", "00000_00.jpg")
+        rgb_agnostic = generate_rgb_agnostic(img, img_agnostic_parse_map)
+
+        write_img(rgb_agnostic, "../data/train/ia", img_name)
 
 
