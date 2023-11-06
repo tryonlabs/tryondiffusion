@@ -23,3 +23,8 @@ Once the pull request is created, we will review the code changes and merge the 
 
 If you are interested in writing the documentation, you can add it to README.md and create a pull request. 
 For now, we are maintaining our documentation in a single file and we will add more files as it grows.
+
+
+## License
+
+All material is made available under [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). You can **use** the material for **non-commercial purposes**, as long as you give appropriate credit by **citing our original [github repo](https://github.com/kailashahirwar/tryondiffusion)** and **indicate any changes** that you've made to the code.
