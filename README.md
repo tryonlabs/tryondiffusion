@@ -3,6 +3,14 @@
 
 ### [Click here](https://discord.gg/T5mPpZHxkY) to join our discord channel
 
+## Roadmap
+
+1. ~~Prepare initial implementation~~
+1. Test initial implementation with small dataset (VITON-HD)
+1. Gather sufficient data and compute resources
+1. Prepare and train final implementation
+1. Publicly release parameters
+
 ## How to contribute to tryondiffusion
 
 ### 1. Open an issue
