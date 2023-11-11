@@ -13,4 +13,12 @@ We have chosen to use a [Pytorch Implementation](https://github.com/Hzzone/pytor
 ## U2Net Human Parsing
 
 
+## U2Net Cloth Segmentation
+Run the following command to segment clothes using the U2Net model
+```
+python segment_cloth_u2net.py --inputs_dir inputs --outputs_dir outputs --checkpoint_path pre_processing/u2net_cloth_seg/checkpoints/cloth_segm.pth 
+```
+Note: Download the checkpoint file by following the instructions given in the repository https://github.com/wildoctopus/huggingface-cloth-segmentation
+
+
 ## Segformer Human Parsing
