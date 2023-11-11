@@ -12,15 +12,19 @@ def get_upper_garment(img, img_parse_map):
 if __name__ == "__main__":
     import os
     import sys
-
+    from tqdm import tqdm
     parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sys.path.insert(0, parentdir)
 
-    from utils.utils import read_img, write_img
+    from utils import read_img, write_img
 
-    img = read_img("../../../zalando-hd-resized/test/image/00006_00.jpg")
-    img_parse_map = read_img("../../../zalando-hd-resized/test/image-parse-v3/00006_00.png")
+    imgs_folder = sorted(os.listdir("../../../zalando-hd-resized/train/image/"))
+    img_parse_map = sorted(os.listdir("../../../zalando-hd-resized/train/image-parse-agnostic-v3.2/"))
 
-    segmented_garment = get_upper_garment(img, img_parse_map)
+    for img_name, img_parse_map in tqdm(zip(imgs_folder, img_parse_map)):
+        img = read_img(os.path.join("../../../zalando-hd-resized/train/image/", img_name))
+        img_parse_map = read_img(os.path.join("../../../zalando-hd-resized/train/image-parse-v3/", img_parse_map))
 
-    write_img(segmented_garment, "../data/test_flow/validation/ic", "00006_00.jpg")
+        segmented_garment = get_upper_garment(img, img_parse_map)
+
+        write_img(segmented_garment, "../data/train/ic", img_name)
