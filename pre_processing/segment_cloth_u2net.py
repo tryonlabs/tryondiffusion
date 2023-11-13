@@ -3,7 +3,7 @@ import os
 
 import torch
 
-from pre_processing.u2net_cloth_seg import segment
+from u2net_cloth_seg import segment
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='U Square Net based cloth segmentation')

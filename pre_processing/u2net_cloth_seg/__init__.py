@@ -16,7 +16,7 @@ def segment(device, inputs_dir, outputs_dir, checkpoint_path):
          NormalizeImage(0.5, 0.5)]
     )
 
-    net = create_model(checkpoint_path)
+    net = create_model(device, checkpoint_path)
 
     images_list = sorted(os.listdir(inputs_dir))
     pbar = tqdm(total=len(images_list))

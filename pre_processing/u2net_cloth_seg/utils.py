@@ -7,7 +7,7 @@ from torchvision import transforms
 from .unet import U2NET
 
 
-def create_model(checkpoint_path):
+def create_model(device, checkpoint_path):
     if not os.path.exists(checkpoint_path):
         print("Invalid path")
         return
@@ -21,6 +21,7 @@ def create_model(checkpoint_path):
         new_state_dict[name] = v
 
     model.load_state_dict(new_state_dict)
+    model = model.to(device=device)
     print("Checkpoints loaded from path: {}".format(checkpoint_path))
 
     return model
