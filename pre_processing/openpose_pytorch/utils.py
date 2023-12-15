@@ -82,3 +82,66 @@ def draw_bodypose(canvas, candidate, subset):
     # plt.imsave("preview.jpg", canvas[:, :, [2, 1, 0]])
     # plt.imshow(canvas[:, :, [2, 1, 0]])
     return canvas
+
+
+def save_25kp_json(candidate, subset):
+    map25to18 = {
+                    0: 0,
+                    1: 1,
+                    2: 2,
+                    3: 3,
+                    4: 4,
+                    5: 5,
+                    6: 6,
+                    7: 7,
+                    8: "mean_8_11",
+                    9: 8,
+                    10: 9,
+                    11: 10,
+                    12: 11,
+                    13: 12,
+                    14: 13,
+                    15: 14,
+                    16: 15,
+                    17: 16,
+                    18: 17,
+                    19: None,
+                    20: None,
+                    21: None,
+                    22: None,
+                    23: None,
+                    24: None
+                }
+    result = dict()
+    result["people"] = list()
+    result["people"].append(dict())
+    result["people"][0]["pose_keypoints_2d"] = list()
+
+    kp17 = dict()
+    for i in range(18):
+        index = int(subset[0][i])
+        if index == -1:
+            x, y = 0.0, 0.0
+        else:
+            x, y = candidate[index][0:2]
+        kp17[i] = (x, y)
+    kp25 = dict()
+    for i in range(25):
+        keypoint_index_kp17 = map25to18[i]
+        if type(keypoint_index_kp17) is int:
+            keypoint_kp17 = kp17[keypoint_index_kp17]
+            kp25[i] = keypoint_kp17
+        else:
+            xi_kp25, yi_kp25 = 0.0, 0.0
+            if keypoint_index_kp17 == "mean_8_11":
+                xi_kp25 = (kp17[8][0] + kp17[11][0])/2
+                yi_kp25 = (kp17[8][1] + kp17[11][1])/2
+            elif keypoint_index_kp17 is None:
+                xi_kp25 = 0.0
+                yi_kp25 = 0.0
+            kp25[i] = (xi_kp25, yi_kp25)
+        result["people"][0]["pose_keypoints_2d"].append(kp25[i][0])
+        result["people"][0]["pose_keypoints_2d"].append(kp25[i][1])
+        result["people"][0]["pose_keypoints_2d"].append(0.9)
+
+    return result
