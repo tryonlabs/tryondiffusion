@@ -1,3 +1,5 @@
+import json
+
 import cv2
 import numpy as np
 import math
@@ -218,12 +220,15 @@ if __name__ == "__main__":
     # candidate: x, y, score, id
     # subset: n*20 array, 0-17 is the index in candidate, 18 is the total score, 19 is the total parts
 
-    canvas = utils.draw_bodypose(oriImg, candidate, subset)
-    plt.imshow(canvas[:, :, [2, 1, 0]])
+    save_jsn_path = "/home/tanay/try_on/25kp_results/00006_00.json"
+    jsn = utils.save_25kp_json(candidate, subset)
+    # plt.imshow(canvas[:, :, [2, 1, 0]])
 
     # to save image(uncomment and provide path to save image)
     # plt.savefig(save_path_image)
 
     # to show image
-    plt.show()
+    # plt.show()
 
+    with open(save_jsn_path, "w") as f:
+        json.dump(jsn, f)
