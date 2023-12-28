@@ -1,6 +1,5 @@
-import os
-
 import numpy as np
+import os
 import torch
 import torch.nn.functional as F
 from PIL import Image
@@ -11,6 +10,8 @@ from .utils import create_model, NormalizeImage, get_palette
 
 
 def segment(device, inputs_dir, outputs_dir, checkpoint_path):
+    os.makedirs(os.path.join(outputs_dir, "cloth-mask"), exist_ok=True)
+
     transform_fn = transforms.Compose(
         [transforms.ToTensor(),
          NormalizeImage(0.5, 0.5)]
@@ -48,18 +49,18 @@ def segment(device, inputs_dir, outputs_dir, checkpoint_path):
             alpha_mask = alpha_mask[0]  # Selecting the first channel to make it 2D
             alpha_mask_img = Image.fromarray(alpha_mask, mode='L')
             alpha_mask_img = alpha_mask_img.resize(img_size, Image.BICUBIC)
-            alpha_mask_img.save(os.path.join(outputs_dir, "alpha_masks", f'{image_name.split(".")[0]}.png'))
+            alpha_mask_img.save(os.path.join(outputs_dir, "cloth-mask", f'{image_name.split(".")[0]}.jpg'))
 
-        # Save final cloth segmentations
-        palette = get_palette(4)
-        cloth_seg = Image.fromarray(output_arr[0].astype(np.uint8), mode='P')
-        cloth_seg.putpalette(palette)
-        cloth_seg = cloth_seg.resize(img_size, Image.BICUBIC)
-        cloth_seg.save(os.path.join(outputs_dir, "final_seg", f'{image_name.split(".")[0]}.png'))
+        # # Save final cloth segmentations
+        # palette = get_palette(4)
+        # cloth_seg = Image.fromarray(output_arr[0].astype(np.uint8), mode='P')
+        # cloth_seg.putpalette(palette)
+        # cloth_seg = cloth_seg.resize(img_size, Image.BICUBIC)
+        # cloth_seg.save(os.path.join(outputs_dir, "final_seg", f'{image_name.split(".")[0]}.png'))
 
-        # save the original image
-        img = img.resize(img_size, Image.BICUBIC)
-        img.save(os.path.join(outputs_dir, "original", f'{image_name.split(".")[0]}.png'))
+        # # save the original image
+        # img = img.resize(img_size, Image.BICUBIC)
+        # img.save(os.path.join(outputs_dir, "original", f'{image_name.split(".")[0]}.png'))
 
         pbar.update(1)
 
