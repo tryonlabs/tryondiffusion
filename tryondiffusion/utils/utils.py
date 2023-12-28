@@ -1,10 +1,8 @@
 import cv2
-import json
 import math
 import numbers
 import os
 
-import torch
 from torch import nn
 from torch.nn import functional as F
 
@@ -38,6 +36,7 @@ class GaussianSmoothing(nn.Module):
         dim (int, optional): The number of dimensions of the data.
             Default value is 2 (spatial).
     """
+
     def __init__(self, channels, kernel_size, sigma, conv_dim):
         super(GaussianSmoothing, self).__init__()
         if isinstance(kernel_size, numbers.Number):
@@ -102,7 +101,6 @@ def mk_folders(run_name):
 if __name__ == "__main__":
     import torch
     import time
-
 
     torch.manual_seed(1)
     smoothing = GaussianSmoothing(1, 3, 0.6, 2)

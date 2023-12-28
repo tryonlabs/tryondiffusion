@@ -6,7 +6,7 @@ from einops import rearrange, repeat
 
 import math
 
-from utils.utils import GaussianSmoothing
+from .utils import GaussianSmoothing
 
 
 class DownSample(nn.Module):

@@ -1,4 +1,4 @@
-from diffusion import Diffusion
+from .diffusion import Diffusion
 
 
 class ArgParser:

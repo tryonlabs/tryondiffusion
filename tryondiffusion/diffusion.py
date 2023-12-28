@@ -10,10 +10,9 @@ from torch.nn import functional as F
 import cv2
 import numpy as np
 
-from network import UNet64, UNet128
-from utils.utils import mk_folders, GaussianSmoothing
-from utils.dataloader_train import UNetDataset
-from ema import EMA
+from .network import UNet64, UNet128
+from .utils import mk_folders, GaussianSmoothing, UNetDataset
+from .ema import EMA
 
 
 def smoothen_image(img, sigma):

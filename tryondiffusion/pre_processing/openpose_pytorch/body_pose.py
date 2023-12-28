@@ -1,13 +1,12 @@
-import json
-
 import cv2
-import numpy as np
+import json
 import math
-from scipy.ndimage.filters import gaussian_filter
+import numpy as np
 import torch
+from scipy.ndimage.filters import gaussian_filter
 
-import utils
-from model import bodypose_model
+from .model import bodypose_model
+from .utils import transfer, padRightDownCorner, save_25kp_json
 
 
 class Body(object):
@@ -16,7 +15,7 @@ class Body(object):
         self.model = bodypose_model()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
-        model_dict = utils.transfer(self.model, torch.load(model_path))
+        model_dict = transfer(self.model, torch.load(model_path))
         self.model.load_state_dict(model_dict)
         self.model.eval()
 
@@ -35,7 +34,7 @@ class Body(object):
         for m in range(len(multiplier)):
             scale = multiplier[m]
             imageToTest = cv2.resize(oriImg, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            imageToTest_padded, pad = utils.padRightDownCorner(imageToTest, stride, padValue)
+            imageToTest_padded, pad = padRightDownCorner(imageToTest, stride, padValue)
             im = np.transpose(np.float32(imageToTest_padded[:, :, :, np.newaxis]), (3, 2, 0, 1)) / 256 - 0.5
             im = np.ascontiguousarray(im)
 
@@ -81,7 +80,8 @@ class Body(object):
             map_down[:, :-1] = one_heatmap[:, 1:]
 
             peaks_binary = np.logical_and.reduce(
-                (one_heatmap >= map_left, one_heatmap >= map_right, one_heatmap >= map_up, one_heatmap >= map_down, one_heatmap > thre1))
+                (one_heatmap >= map_left, one_heatmap >= map_right, one_heatmap >= map_up, one_heatmap >= map_down,
+                 one_heatmap > thre1))
             peaks = list(zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]))  # note reverse
             peaks_with_score = [x + (map_ori[x[1], x[0]],) for x in peaks]
             peak_id = range(peak_counter, peak_counter + len(peaks))
@@ -207,12 +207,11 @@ class Body(object):
         # candidate: x, y, score, id
         return candidate, subset
 
+
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
+    body_estimation = Body('/Users/apple/Downloads/body_pose_model.pth')
 
-    body_estimation = Body('body_pose_model.pth')
-
-    test_image = "/home/tanay/try_on/zalando-hd-resized/test/image/00006_00.jpg"
+    test_image = "/Users/apple/Downloads/zalando-hd-resized/test/image/00006_00.jpg"
     save_path_image = "path to save the image"
 
     oriImg = cv2.imread(test_image)  # B,G,R order
@@ -220,8 +219,8 @@ if __name__ == "__main__":
     # candidate: x, y, score, id
     # subset: n*20 array, 0-17 is the index in candidate, 18 is the total score, 19 is the total parts
 
-    save_jsn_path = "/home/tanay/try_on/25kp_results/00006_00.json"
-    jsn = utils.save_25kp_json(candidate, subset)
+    save_jsn_path = "/Users/apple/Downloads/00006_00.json"
+    jsn = save_25kp_json(candidate, subset)
     # plt.imshow(canvas[:, :, [2, 1, 0]])
 
     # to save image(uncomment and provide path to save image)
