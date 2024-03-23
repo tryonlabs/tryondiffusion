@@ -8,7 +8,8 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 from tqdm import tqdm
-from .create_u2net import create_model
+
+from .u2net import load_cloth_segm_model
 from .utils import NormalizeImage, naive_cutout, resize_by_bigger_index, image_resize
 
 
@@ -22,7 +23,7 @@ def segment_garment(inputs_dir, outputs_dir, cls="all"):
          NormalizeImage(0.5, 0.5)]
     )
 
-    net = create_model(device, os.environ.get("U2NET_CLOTH_SEG_CHECKPOINT_PATH"))
+    net = load_cloth_segm_model(device, os.environ.get("U2NET_CLOTH_SEGM_CHECKPOINT_PATH"), in_ch=3, out_ch=4)
 
     images_list = sorted(os.listdir(inputs_dir))
     pbar = tqdm(total=len(images_list))

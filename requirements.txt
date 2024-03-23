@@ -7,3 +7,4 @@ tqdm
 torchvision
 einops
 python-dotenv
+scikit-image

@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import cv2
 from PIL import Image
 from torchvision import transforms
@@ -71,3 +74,18 @@ def image_resize(image, width=None, height=None):
     resized = cv2.resize(image, dim)
 
     return resized
+
+
+def convert_to_jpg(image_path, output_dir, size=None):
+    """
+    Convert image to jpg format
+    :param image_path: image path
+    :param output_dir: output directory
+    :param size: desired size of the image (w, h)
+    """
+    img = cv2.imread(image_path)
+    if size is not None:
+        img = image_resize(img, width=size[0], height=size[1])
+
+    filename = Path(image_path).name
+    cv2.imwrite(os.path.join(output_dir, filename.split(".")[0] + ".jpg"), img)

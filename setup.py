@@ -23,6 +23,7 @@ setup(
         "tqdm",
         "torchvision",
         "einops",
-        "scipy"
+        "scipy",
+        "scikit-image"
     ]
 )

@@ -7,9 +7,7 @@ class REBNCONV(nn.Module):
     def __init__(self, in_ch=3, out_ch=3, dirate=1):
         super(REBNCONV, self).__init__()
 
-        self.conv_s1 = nn.Conv2d(
-            in_ch, out_ch, 3, padding=1 * dirate, dilation=1 * dirate
-        )
+        self.conv_s1 = nn.Conv2d(in_ch, out_ch, 3, padding=1 * dirate, dilation=1 * dirate)
         self.bn_s1 = nn.BatchNorm2d(out_ch)
         self.relu_s1 = nn.ReLU(inplace=True)
 
@@ -22,13 +20,14 @@ class REBNCONV(nn.Module):
 
 ## upsample tensor 'src' to have the same spatial size with tensor 'tar'
 def _upsample_like(src, tar):
-    src = F.upsample(src, size=tar.shape[2:], mode="bilinear")
+    src = F.upsample(src, size=tar.shape[2:], mode='bilinear')
 
     return src
 
 
 ### RSU-7 ###
 class RSU7(nn.Module):  # UNet07DRES(nn.Module):
+
     def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
         super(RSU7, self).__init__()
 
@@ -100,17 +99,12 @@ class RSU7(nn.Module):  # UNet07DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup, hx1), 1))
 
-        """
-        del hx1, hx2, hx3, hx4, hx5, hx6, hx7
-        del hx6d, hx5d, hx3d, hx2d
-        del hx2dup, hx3dup, hx4dup, hx5dup, hx6dup
-        """
-
         return hx1d + hxin
 
 
 ### RSU-6 ###
 class RSU6(nn.Module):  # UNet06DRES(nn.Module):
+
     def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
         super(RSU6, self).__init__()
 
@@ -173,17 +167,12 @@ class RSU6(nn.Module):  # UNet06DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup, hx1), 1))
 
-        """
-        del hx1, hx2, hx3, hx4, hx5, hx6
-        del hx5d, hx4d, hx3d, hx2d
-        del hx2dup, hx3dup, hx4dup, hx5dup
-        """
-
         return hx1d + hxin
 
 
 ### RSU-5 ###
 class RSU5(nn.Module):  # UNet05DRES(nn.Module):
+
     def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
         super(RSU5, self).__init__()
 
@@ -236,17 +225,12 @@ class RSU5(nn.Module):  # UNet05DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup, hx1), 1))
 
-        """
-        del hx1, hx2, hx3, hx4, hx5
-        del hx4d, hx3d, hx2d
-        del hx2dup, hx3dup, hx4dup
-        """
-
         return hx1d + hxin
 
 
 ### RSU-4 ###
 class RSU4(nn.Module):  # UNet04DRES(nn.Module):
+
     def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
         super(RSU4, self).__init__()
 
@@ -289,17 +273,12 @@ class RSU4(nn.Module):  # UNet04DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup, hx1), 1))
 
-        """
-        del hx1, hx2, hx3, hx4
-        del hx3d, hx2d
-        del hx2dup, hx3dup
-        """
-
         return hx1d + hxin
 
 
 ### RSU-4F ###
 class RSU4F(nn.Module):  # UNet04FRES(nn.Module):
+
     def __init__(self, in_ch=3, mid_ch=12, out_ch=3):
         super(RSU4F, self).__init__()
 
@@ -330,16 +309,12 @@ class RSU4F(nn.Module):  # UNet04FRES(nn.Module):
         hx2d = self.rebnconv2d(torch.cat((hx3d, hx2), 1))
         hx1d = self.rebnconv1d(torch.cat((hx2d, hx1), 1))
 
-        """
-        del hx1, hx2, hx3, hx4
-        del hx3d, hx2d
-        """
-
         return hx1d + hxin
 
 
 ##### U^2-Net ####
 class U2NET(nn.Module):
+
     def __init__(self, in_ch=3, out_ch=1):
         super(U2NET, self).__init__()
 
@@ -438,17 +413,12 @@ class U2NET(nn.Module):
 
         d0 = self.outconv(torch.cat((d1, d2, d3, d4, d5, d6), 1))
 
-        """
-        del hx1, hx2, hx3, hx4, hx5, hx6
-        del hx5d, hx4d, hx3d, hx2d, hx1d
-        del hx6up, hx5dup, hx4dup, hx3dup, hx2dup
-        """
-
-        return d0, d1, d2, d3, d4, d5, d6
+        return F.sigmoid(d0), F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)
 
 
 ### U^2-Net small ###
 class U2NETP(nn.Module):
+
     def __init__(self, in_ch=3, out_ch=1):
         super(U2NETP, self).__init__()
 
@@ -547,4 +517,4 @@ class U2NETP(nn.Module):
 
         d0 = self.outconv(torch.cat((d1, d2, d3, d4, d5, d6), 1))
 
-        return d0, d1, d2, d3, d4, d5, d6
+        return F.sigmoid(d0), F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)
