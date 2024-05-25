@@ -2,7 +2,7 @@
 
 Before you start, make a .env file in your project's main folder. Put these environment variables inside it.
 ```
-U2NET_CLOTH_SEG_CHECKPOINT_PATH=cloth_segm.pth
+U2NET_CLOTH_SEGM_CHECKPOINT_PATH=cloth_segm.pth
 ```
 
 #### Remember to load environment variables before you start running scripts.
