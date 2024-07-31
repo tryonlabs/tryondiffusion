@@ -8,3 +8,6 @@ torchvision
 einops
 python-dotenv
 scikit-image
+diffusers
+transformers
+gradio

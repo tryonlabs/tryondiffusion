@@ -53,6 +53,8 @@ def segment_garment(inputs_dir, outputs_dir, cls="all"):
             classes_to_save = [1]
         elif cls == "lower":
             classes_to_save = [2]
+        elif cls == "dress":
+            classes_to_save = [3]
         else:
             raise ValueError(f"Unknown cls: {cls}")
 

@@ -24,6 +24,7 @@ setup(
         "torchvision",
         "einops",
         "scipy",
-        "scikit-image"
+        "scikit-image",
+        "gradio"
     ]
 )
