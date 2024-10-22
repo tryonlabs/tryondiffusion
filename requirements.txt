@@ -10,4 +10,5 @@ python-dotenv
 scikit-image
 diffusers
 transformers
-gradio
+gradio==4.44.1
+gradio_modal==0.0.3
