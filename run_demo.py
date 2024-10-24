@@ -8,8 +8,8 @@ if __name__ == '__main__':
     args = argp.parse_args()
 
     if args.name == "extract_garment":
-        from demos import extract_garment_demo as demo
+        from demo import extract_garment_demo as demo
         demo.launch()
     elif args.name == "model_swap":
-        from demos import model_swap_demo as demo
+        from demo import model_swap_demo as demo
         demo.launch()
