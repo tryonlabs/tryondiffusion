@@ -25,6 +25,7 @@ setup(
         "einops",
         "scipy",
         "scikit-image",
-        "gradio"
+        "gradio==4.44.1",
+        "gradio_modal==0.0.3"
     ]
 )

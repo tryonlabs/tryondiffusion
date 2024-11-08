@@ -1,0 +1,10 @@
+spaces
+gradio
+diffusers
+torch
+numpy
+transformers
+accelerate
+protobuf
+sentencepiece
+peft==0.13.2
