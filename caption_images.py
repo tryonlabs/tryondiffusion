@@ -6,9 +6,16 @@ from PIL import Image
 
 from tryon.preprocessing.captioning import caption_image, create_llava_next_pipeline
 
-INPUT_IMAGES_DIR = os.path.join("fashion_dataset", "*")
-OUTPUT_CAPTIONS_DIR = "fashion_dataset_captions"
+INPUT_IMAGES_DIR = os.path.join("fashion_datatset", "*")
+OUTPUT_CAPTIONS_DIR = "fashion_datatset_captions"
+
 os.makedirs(OUTPUT_CAPTIONS_DIR, exist_ok=True)
+
+
+def change_extension(filename, new_extension):
+    base_name, _ = os.path.splitext(filename)
+    return f"{base_name}.{new_extension}"
+
 
 if __name__ == '__main__':
     model, processor = create_llava_next_pipeline()
@@ -28,9 +35,9 @@ if __name__ == '__main__':
         """
 
         json_file_path = os.path.join(OUTPUT_CAPTIONS_DIR,
-                                      os.path.basename(image_path).replace(".png", ".json"))
+                                      change_extension(os.path.basename(image_path), "json"))
         caption_file_path = os.path.join(OUTPUT_CAPTIONS_DIR,
-                                         os.path.basename(image_path).replace(".png", ".txt"))
+                                         change_extension(os.path.basename(image_path), "txt"))
 
         if os.path.exists(caption_file_path) and os.path.exists(json_file_path):
             print(f"caption already exists for {image_path}")
