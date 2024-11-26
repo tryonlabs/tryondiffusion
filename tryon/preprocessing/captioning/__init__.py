@@ -1,0 +1,1 @@
+from .generate_caption import caption_image
