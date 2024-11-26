@@ -2,21 +2,16 @@ import glob
 import json
 import os
 
-import torch
 from PIL import Image
-from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 
-from tryon.preprocessing.captioning import generate_caption
+from tryon.preprocessing.captioning import caption_image, create_llava_next_pipeline
 
 INPUT_IMAGES_DIR = os.path.join("fashion_dataset", "*")
 OUTPUT_CAPTIONS_DIR = "fashion_dataset_captions"
 os.makedirs(OUTPUT_CAPTIONS_DIR, exist_ok=True)
 
 if __name__ == '__main__':
-    processor = LlavaNextProcessor.from_pretrained("llava-hf/llava-v1.6-mistral-7b-hf")
-    model = LlavaNextForConditionalGeneration.from_pretrained("llava-hf/llava-v1.6-mistral-7b-hf",
-                                                              torch_dtype=torch.float16, low_cpu_mem_usage=True)
-    model.to("cuda:0")
+    model, processor = create_llava_next_pipeline()
 
     images_path = sorted(glob.glob(INPUT_IMAGES_DIR))
 
@@ -32,14 +27,19 @@ if __name__ == '__main__':
         Answer: 
         """
 
+        json_file_path = os.path.join(OUTPUT_CAPTIONS_DIR,
+                                      os.path.basename(image_path).replace(".png", ".json"))
         caption_file_path = os.path.join(OUTPUT_CAPTIONS_DIR,
-                                         os.path.basename(image_path).replace(".png", ".json"))
+                                         os.path.basename(image_path).replace(".png", ".txt"))
 
-        if os.path.exists(caption_file_path):
+        if os.path.exists(caption_file_path) and os.path.exists(json_file_path):
             print(f"caption already exists for {image_path}")
             continue
 
-        generated_caption = generate_caption(image, prompt, model, processor)
+        json_data, generated_caption = caption_image(image, prompt, model, processor, json_only=False)
+
+        with open(json_file_path, "w") as f:
+            json.dump(json_data, f)
 
         with open(caption_file_path, "w") as f:
-            json.dump(json.loads(generated_caption.replace("```json", "").replace("```", "")), f)
+            f.write(generated_caption)
